@@ -5,12 +5,13 @@ import (
 	"log"
 	"time"
 
+	"github.com/tidwall/redcon"
 	bolt "go.etcd.io/bbolt"
 )
 
 func main() {
-	fmt.Println("MoDB Started")
-	defer fmt.Println("MoDB Finished\n")
+	log.Println("MoDB Started")
+	defer log.Println("MoDB Finished\n")
 
 	// open the MoDB database
 	db, err := bolt.Open("modb.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
@@ -30,4 +31,37 @@ func main() {
 		return nil
 	})
 
+	// the main client
+	addr := ":29876"
+
+	log.Printf("Opening %s", addr)
+	err = redcon.ListenAndServe(addr,
+		func(conn redcon.Conn, cmd redcon.Command) {
+			switch string(cmd.Args[0]) {
+			default:
+				conn.WriteError("ERR unknown command '" + string(cmd.Args[0]) + "'")
+			case "ping":
+				conn.WriteString("PONG")
+			case "quit":
+				conn.WriteString("OK")
+				conn.Close()
+			}
+		},
+		func(conn redcon.Conn) bool {
+			// use this function to accept or deny the connection.
+			log.Printf("Accept %s", conn.RemoteAddr())
+			return true
+		},
+		func(conn redcon.Conn, err error) {
+			// this is called when the connection has been closed
+			if err != nil {
+				log.Printf("Closed %s (err: %v)", conn.RemoteAddr(), err)
+				return
+			}
+			log.Printf("Closed %s", conn.RemoteAddr())
+		},
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

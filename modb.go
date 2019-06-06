@@ -33,9 +33,8 @@ func main() {
 
 	// the main client
 	addr := ":29876"
-
-	log.Printf("Opening %s", addr)
-	err = redcon.ListenAndServe(addr,
+	log.Println("Creating Client Server")
+	server := redcon.NewServer(addr,
 		func(conn redcon.Conn, cmd redcon.Command) {
 			switch string(cmd.Args[0]) {
 			default:
@@ -61,6 +60,9 @@ func main() {
 			log.Printf("Closed %s", conn.RemoteAddr())
 		},
 	)
+
+	log.Printf("Client Server listening on %s\n", addr)
+	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -11,6 +11,9 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+var logBucketName = []byte("log")
+var keyBucketName = []byte("key")
+
 func main() {
 	log.Println("MoDB Started")
 	defer log.Println("MoDB Finished\n")
@@ -24,8 +27,14 @@ func main() {
 
 	// create the various buckets
 	err = db.Update(func(tx *bolt.Tx) error {
+		// log
+		_, err := tx.CreateBucketIfNotExists(logBucketName)
+		if err != nil {
+			return fmt.Errorf("create log bucket: %s", err)
+		}
+
 		// key
-		_, err := tx.CreateBucketIfNotExists([]byte("key"))
+		_, err = tx.CreateBucketIfNotExists(keyBucketName)
 		if err != nil {
 			return fmt.Errorf("create key bucket: %s", err)
 		}
@@ -54,11 +63,10 @@ func main() {
 				}
 				conn.WriteString(t + "Z\n")
 			case "id":
-				// conn.WriteString(sid.IdHex())
 				conn.WriteString(sid.IdBase64())
 			case "set":
 				if len(cmd.Args) != 3 {
-					conn.WriteError("ERR wrong number of arguments: set key val")
+					conn.WriteError("ERR wrong number of arguments: set <key> <val>")
 					return
 				}
 
@@ -67,18 +75,23 @@ func main() {
 				val := string(cmd.Args[2])
 
 				// ToDo: validate both name and json.
+				id := sid.IdBase64()
 
 				err = db.Update(func(tx *bolt.Tx) error {
-					b := tx.Bucket([]byte("key"))
+					kb := tx.Bucket(keyBucketName)
+					lb := tx.Bucket(logBucketName)
 
-					id := sid.IdBase64()
-
-					fmt.Printf("id=%s\n", id)
-
-					err := b.Put([]byte(key), []byte(val))
+					logKey := id + ":" + key
+					err := lb.Put([]byte(logKey), []byte(val))
 					if err != nil {
-						return fmt.Errorf("create key bucket: %s", err)
+						return fmt.Errorf("put log bucket: %s", err)
 					}
+
+					err = kb.Put([]byte(key), []byte(val))
+					if err != nil {
+						return fmt.Errorf("put key bucket: %s", err)
+					}
+
 					return nil
 				})
 				if err != nil {
@@ -91,7 +104,7 @@ func main() {
 
 			case "get":
 				if len(cmd.Args) != 2 {
-					conn.WriteError("ERR wrong number of arguments: get key")
+					conn.WriteError("ERR wrong number of arguments: get <key>")
 					return
 				}
 
@@ -105,7 +118,7 @@ func main() {
 
 				var val []byte
 				err = db.View(func(tx *bolt.Tx) error {
-					b := tx.Bucket([]byte("key"))
+					b := tx.Bucket(keyBucketName)
 
 					val = b.Get([]byte(key))
 					return nil

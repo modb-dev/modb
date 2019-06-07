@@ -8,3 +8,7 @@ run:
 
 execute:
 	./modb
+
+list-modules:
+	go list -m all
+	# To update a module, do `go get github.com/chilts/sid`

@@ -44,12 +44,15 @@ func main() {
 			case "ping":
 				conn.WriteString("PONG")
 			case "time":
-				t := time.Now().Format(time.RFC3339)
+				t := time.Now().UTC().Format("2006-01-02T15:04:05.999")
 				if err != nil {
 					conn.WriteError("ERR returning time")
 					return
 				}
-				conn.WriteString(t + "\n")
+				for len(t) < 23 {
+					t = t + "0"
+				}
+				conn.WriteString(t + "Z\n")
 			case "id":
 				// conn.WriteString(sid.IdHex())
 				conn.WriteString(sid.IdBase64())

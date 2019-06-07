@@ -136,8 +136,28 @@ func main() {
 				conn.WriteString(string(val))
 
 			case "dump":
-				// ToDo: ... ???
-				conn.WriteString("ToDo!")
+				fmt.Println("+++ Dump +++")
+				err = db.View(func(tx *bolt.Tx) error {
+					c := tx.Cursor()
+					// this top-level cursor gets all of the buckets
+					for k, _ := c.First(); k != nil; k, _ = c.Next() {
+						fmt.Printf("Bucket '%s'\n", k)
+						b := tx.Bucket(k)
+						cb := b.Cursor()
+						for k, v := cb.First(); k != nil; k, v = cb.Next() {
+							fmt.Printf("* %s=%s\n", k, v)
+						}
+					}
+					fmt.Println("--- Dump ---")
+					return nil
+				})
+				if err != nil {
+					log.Printf("dump: db.View(): err: ", err)
+					conn.WriteError("ERR reading datastore")
+					return
+				}
+
+				conn.WriteString("DONE")
 			case "quit":
 				conn.WriteString("OK")
 				conn.Close()

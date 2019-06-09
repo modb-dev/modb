@@ -1,6 +1,8 @@
 # MoDB #
 
-A distributed key/value store with (operation-based) CRDTs built-in.
+A distributed key/value document store with (operation-based) CRDTs built-in.
+
+Throw data at it, and it's all good!
 
 ## No Master - All Nodes are the Same ##
 

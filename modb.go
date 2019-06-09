@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/chilts/sid"
+	"github.com/modb-dev/modb/store"
+	badger "github.com/modb-dev/modb/store/badger"
+	bbolt "github.com/modb-dev/modb/store/bbolt"
 	"github.com/tidwall/redcon"
-	bolt "go.etcd.io/bbolt"
 )
 
 var logBucketName = []byte("log")
@@ -18,29 +20,20 @@ func main() {
 	log.Println("MoDB Started")
 	defer log.Println("MoDB Finished\n")
 
+	var db store.Storage
+	var err error
+
 	// open the MoDB database
-	db, err := bolt.Open("modb.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
+	isBolt := true
+	if isBolt {
+		db, err = bbolt.Open("data/bbolt.db")
+	} else {
+		db, err = badger.Open("data/badger.db")
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
-
-	// create the various buckets
-	err = db.Update(func(tx *bolt.Tx) error {
-		// log
-		_, err := tx.CreateBucketIfNotExists(logBucketName)
-		if err != nil {
-			return fmt.Errorf("create log bucket: %s", err)
-		}
-
-		// key
-		_, err = tx.CreateBucketIfNotExists(keyBucketName)
-		if err != nil {
-			return fmt.Errorf("create key bucket: %s", err)
-		}
-
-		return nil
-	})
 
 	// the main client
 	addr := ":29876"
@@ -76,90 +69,25 @@ func main() {
 
 				// ToDo: validate both name and json.
 				id := sid.IdBase64()
-
-				err = db.Update(func(tx *bolt.Tx) error {
-					kb := tx.Bucket(keyBucketName)
-					lb := tx.Bucket(logBucketName)
-
-					logKey := id + ":" + key
-					err := lb.Put([]byte(logKey), []byte(val))
-					if err != nil {
-						return fmt.Errorf("put log bucket: %s", err)
-					}
-
-					err = kb.Put([]byte(key), []byte(val))
-					if err != nil {
-						return fmt.Errorf("put key bucket: %s", err)
-					}
-
-					return nil
-				})
+				err := db.Set(id, key, val)
 				if err != nil {
-					log.Printf("set: db.Update(): err: ", err)
+					log.Printf("set: db.Set(): err: ", err)
 					conn.WriteError("ERR writing to datastore")
 					return
 				}
 
 				conn.WriteString("OK")
 
-			case "get":
-				if len(cmd.Args) != 2 {
-					conn.WriteError("ERR wrong number of arguments: get <key>")
-					return
-				}
-
-				// key is any string, val should be a valid JSON object
-				key := string(cmd.Args[1])
-
-				// ToDo: validate both name and json.
-
-				// ToDo: get isn't this simple, we need to iterate over all values for this key!!
-				// And of course, talk to the other nodes if requested.
-
-				var val []byte
-				err = db.View(func(tx *bolt.Tx) error {
-					b := tx.Bucket(keyBucketName)
-
-					val = b.Get([]byte(key))
-					return nil
-				})
-				if err != nil {
-					log.Printf("get: db.View(): err: ", err)
-					conn.WriteError("ERR reading from datastore")
-					return
-				}
-
-				if val == nil {
-					conn.WriteString("nil")
-					return
-				}
-				conn.WriteString(string(val))
-
 			case "dump":
 				fmt.Println("+++ Dump +++")
-				err = db.View(func(tx *bolt.Tx) error {
-					c := tx.Cursor()
-					// this top-level cursor gets all of the buckets
-					for k, _ := c.First(); k != nil; k, _ = c.Next() {
-						fmt.Printf("Bucket '%s'\n", k)
-						b := tx.Bucket(k)
-						cb := b.Cursor()
-						for k, v := cb.First(); k != nil; k, v = cb.Next() {
-							fmt.Printf("* %s=%s\n", k, v)
-						}
-					}
-					fmt.Println("--- Dump ---")
-					return nil
+				db.Iterate(func(key, val string) {
+					fmt.Printf("* %s=%s\n", key, val)
 				})
-				if err != nil {
-					log.Printf("dump: db.View(): err: ", err)
-					conn.WriteError("ERR reading datastore")
-					return
-				}
+				fmt.Println("--- Dump ---")
 
 				conn.WriteString("DONE")
+
 			case "quit":
-				conn.WriteString("OK")
 				conn.Close()
 			}
 		},

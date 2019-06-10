@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/chilts/sid"
 	"github.com/modb-dev/modb/store"
 	bbolt "go.etcd.io/bbolt"
 )
@@ -44,11 +45,12 @@ func Open(filename string) (store.Storage, error) {
 	return &bboltStore{db}, nil
 }
 
-// Sets the item to the json data provided.
-func (s *bboltStore) Set(id, key, json string) error {
+// Generic 'op'.
+func (s *bboltStore) op(key, op, json string) error {
+	id := sid.IdBase64()
 	keyKey := key + ":" + id
 	logKey := id + ":" + key
-	val := "set:" + json
+	val := op + ":" + json
 
 	return s.db.Update(func(tx *bbolt.Tx) error {
 		lb := tx.Bucket(logBucketName)
@@ -65,6 +67,21 @@ func (s *bboltStore) Set(id, key, json string) error {
 
 		return nil
 	})
+}
+
+// Sets the item to the json data provided.
+func (s *bboltStore) Set(key, json string) error {
+	return s.op(key, "set", json)
+}
+
+// Incs a field inside the object.
+func (s *bboltStore) Inc(key, json string) error {
+	return s.op(key, "inc", json)
+}
+
+// Adds to various fields.
+func (s *bboltStore) Add(key, json string) error {
+	return s.op(key, "inc", json)
 }
 
 func (s *bboltStore) Iterate(fn func(key, val string)) error {

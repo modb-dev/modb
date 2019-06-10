@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/chilts/sid"
 	"github.com/dgraph-io/badger"
 	"github.com/modb-dev/modb/store"
 )
@@ -30,11 +31,12 @@ func Open(dirname string) (store.Storage, error) {
 	return &badgerStore{db}, nil
 }
 
-// Sets the item to the json data provided.
-func (s *badgerStore) Set(id, key, json string) error {
+// op
+func (s *badgerStore) op(key, op, json string) error {
+	id := sid.IdBase64()
 	keyKey := key + ":" + id
 	logKey := id + ":" + key
-	val := "set:" + json
+	val := op + ":" + json
 
 	return s.db.Update(func(txn *badger.Txn) error {
 		// log
@@ -51,6 +53,21 @@ func (s *badgerStore) Set(id, key, json string) error {
 
 		return nil
 	})
+}
+
+// Sets the item to the json data provided.
+func (s *badgerStore) Set(key, json string) error {
+	return s.op(key, "set", json)
+}
+
+// Incs a field in the object.
+func (s *badgerStore) Inc(key, json string) error {
+	return s.op(key, "inc", json)
+}
+
+// Adds to various fields.
+func (s *badgerStore) Add(key, json string) error {
+	return s.op(key, "add", json)
 }
 
 func (s *badgerStore) Iterate(fn func(key, val string)) error {

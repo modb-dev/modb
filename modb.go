@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -55,37 +54,26 @@ func main() {
 					t = t + "0"
 				}
 				conn.WriteString(t + "Z\n")
+
 			case "id":
+				// id
 				conn.WriteString(sid.IdBase64())
+
 			case "set":
-				if len(cmd.Args) != 3 {
-					conn.WriteError("ERR wrong number of arguments: set <key> <val>")
-					return
-				}
+				// set <key> <json>
+				Set(db, conn, cmd.Args[1:]...)
 
-				// key is any string, val should be a valid JSON object
-				key := string(cmd.Args[1])
-				val := string(cmd.Args[2])
+			case "inc":
+				// inc <key> <field>
+				// inc chilts logins
+				Inc(db, conn, cmd.Args[1:]...)
 
-				// ToDo: validate both name and json.
-				id := sid.IdBase64()
-				err := db.Set(id, key, val)
-				if err != nil {
-					log.Printf("set: db.Set(): err: ", err)
-					conn.WriteError("ERR writing to datastore")
-					return
-				}
-
-				conn.WriteString("OK")
+			case "add":
+				// add <key> <field> <count> [<field> <count>...]
+				Add(db, conn, cmd.Args[1:]...)
 
 			case "dump":
-				fmt.Println("+++ Dump +++")
-				db.Iterate(func(key, val string) {
-					fmt.Printf("* %s=%s\n", key, val)
-				})
-				fmt.Println("--- Dump ---")
-
-				conn.WriteString("DONE")
+				Dump(db, conn, cmd.Args[1:]...)
 
 			case "quit":
 				conn.Close()

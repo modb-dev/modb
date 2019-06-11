@@ -9,7 +9,7 @@ func main() {
 	var err error
 
 	if len(os.Args) == 1 {
-		_ = CmdHelp()
+		_ = CmdHelp("")
 		return
 	}
 
@@ -17,11 +17,13 @@ func main() {
 
 	switch command {
 	case "--help":
-		err = CmdHelp(os.Args[2:]...)
+		err = CmdHelp("", os.Args[2:]...)
 	case "help":
-		err = CmdHelp(os.Args[2:]...)
+		err = CmdHelp("", os.Args[2:]...)
 	case "server":
 		err = CmdServer(os.Args[2:]...)
+	default:
+		err = CmdHelp("Unknown command", os.Args[2:]...)
 	}
 
 	if err != nil {

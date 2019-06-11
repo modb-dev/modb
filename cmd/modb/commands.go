@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"strings"
@@ -16,17 +17,25 @@ import (
 var logBucketName = []byte("log")
 var keyBucketName = []byte("key")
 
-func CmdHelp(args ...string) error {
+func CmdHelp(msg string, arguments ...string) error {
+	flagSet := flag.NewFlagSet("", flag.ContinueOnError)
+	flagSet.Parse(arguments)
+
+	// get any remaining args
+	args := flagSet.Args()
 	if len(args) > 0 {
 		command := args[0]
 
 		if command == "server" {
-			CmdHelpServer()
+			CmdHelpServer(msg)
 		}
 
 		return nil
 	}
 
+	if msg != "" {
+		fmt.Printf("Error: %s\n\n", msg)
+	}
 	fmt.Println("MoDB server, client and utilities.")
 	fmt.Println("")
 	fmt.Println("Usage:")
@@ -48,7 +57,10 @@ func CmdHelp(args ...string) error {
 	return nil
 }
 
-func CmdHelpServer() error {
+func CmdHelpServer(msg string) error {
+	if msg != "" {
+		fmt.Printf("Error: %s\n\n", msg)
+	}
 	fmt.Println("Start an MoDB server node to join to a cluster.")
 	fmt.Println("")
 	fmt.Println("Usage:")
@@ -60,19 +72,38 @@ func CmdHelpServer() error {
 	fmt.Println("  -h, --help")
 	fmt.Println("        help for server")
 	fmt.Println("")
-	fmt.Println("  -s, --store")
+	fmt.Println("  -d, --datastore")
 	fmt.Println("        help for server")
 	fmt.Println("")
 	fmt.Println("Use 'modb help [command]' for more information about a command.")
 	return nil
 }
 
-func CmdServer(args ...string) error {
-	if len(args) < 1 {
-		return CmdHelpServer()
+func CmdServer(arguments ...string) error {
+	flagSet := flag.NewFlagSet("", flag.ContinueOnError)
+
+	// store type
+	var datastore string
+	flagSet.StringVar(&datastore, "datastore", "bbolt", "the type of store to use; valid: bbolt, badger (default: bbolt)")
+
+	// help
+	var help bool
+	flagSet.BoolVar(&help, "help", false, "help for MoDB")
+
+	flagSet.Parse(arguments)
+
+	if help == true {
+		return CmdHelpServer("")
 	}
 
-	filename := args[0]
+	// get any remaining args
+	args := flagSet.Args()
+	if len(args) < 1 {
+		return CmdHelpServer("Provide a path for your datastore")
+	}
+
+	// the database pathname to open (file for bbolt, directory for badger)
+	pathname := args[0]
 
 	log.Println("MoDB Started")
 	defer log.Println("MoDB Finished\n")
@@ -81,11 +112,12 @@ func CmdServer(args ...string) error {
 	var err error
 
 	// open the MoDB database
-	isBolt := true
-	if isBolt {
-		db, err = bbolt.Open(filename)
-	} else {
-		db, err = badger.Open(filename)
+	if datastore == "bbolt" {
+		log.Printf("Using datastore bbolt")
+		db, err = bbolt.Open(pathname)
+	} else if datastore == "badger" {
+		log.Printf("Using datastore badger")
+		db, err = badger.Open(pathname)
 	}
 	if err != nil {
 		log.Fatal(err)

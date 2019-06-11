@@ -1,5 +1,5 @@
 build:
-	go build cmd/modb/modb.go cmd/modb/commands.go cmd/modb/client.go
+	go build cmd/modb/modb.go cmd/modb/pkg.go cmd/modb/client.go cmd/modb/cmd-help.go cmd/modb/cmd-server.go
 
 run:
 	go run modb.go

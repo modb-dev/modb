@@ -14,5 +14,5 @@ list-modules:
 	# To update a module, do `go get github.com/chilts/sid`
 
 clean:
-	rm -f modb.db
+	rm -rf data/*
 	rm -f modb

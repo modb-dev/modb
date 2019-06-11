@@ -1,13 +1,13 @@
 all: build execute
 
 build:
-	go build cmd/modb/modb.go cmd/modb/client.go
+	go build cmd/modb/modb.go cmd/modb/commands.go cmd/modb/client.go
 
 run:
 	go run modb.go
 
 execute:
-	./modb
+	./modb server
 
 list-modules:
 	go list -m all

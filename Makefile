@@ -7,7 +7,13 @@ run:
 	go run modb.go
 
 execute:
-	./modb server
+	./modb server data/bbolt.db
+
+execute-bbolt:
+	./modb server --store bbolt data/bbolt.db
+
+execute-badger:
+	./modb server --store badger data/badger.db
 
 list-modules:
 	go list -m all

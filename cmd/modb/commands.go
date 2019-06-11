@@ -16,7 +16,17 @@ import (
 var logBucketName = []byte("log")
 var keyBucketName = []byte("key")
 
-func CmdHelp() error {
+func CmdHelp(args ...string) error {
+	if len(args) > 0 {
+		command := args[0]
+
+		if command == "server" {
+			CmdHelpServer()
+		}
+
+		return nil
+	}
+
 	fmt.Println("MoDB server, client and utilities.")
 	fmt.Println("")
 	fmt.Println("Usage:")
@@ -38,7 +48,32 @@ func CmdHelp() error {
 	return nil
 }
 
-func CmdServer() error {
+func CmdHelpServer() error {
+	fmt.Println("Start an MoDB server node to join to a cluster.")
+	fmt.Println("")
+	fmt.Println("Usage:")
+	fmt.Println("")
+	fmt.Println("  modb server [fileOrDirName]")
+	fmt.Println("")
+	fmt.Println("Flags:")
+	fmt.Println("")
+	fmt.Println("  -h, --help")
+	fmt.Println("        help for server")
+	fmt.Println("")
+	fmt.Println("  -s, --store")
+	fmt.Println("        help for server")
+	fmt.Println("")
+	fmt.Println("Use 'modb help [command]' for more information about a command.")
+	return nil
+}
+
+func CmdServer(args ...string) error {
+	if len(args) < 1 {
+		return CmdHelpServer()
+	}
+
+	filename := args[0]
+
 	log.Println("MoDB Started")
 	defer log.Println("MoDB Finished\n")
 
@@ -48,9 +83,9 @@ func CmdServer() error {
 	// open the MoDB database
 	isBolt := true
 	if isBolt {
-		db, err = bbolt.Open("data/bbolt.db")
+		db, err = bbolt.Open(filename)
 	} else {
-		db, err = badger.Open("data/badger.db")
+		db, err = badger.Open(filename)
 	}
 	if err != nil {
 		log.Fatal(err)

@@ -17,11 +17,11 @@ func main() {
 
 	switch command {
 	case "--help":
-		err = CmdHelp()
+		err = CmdHelp(os.Args[2:]...)
 	case "help":
-		err = CmdHelp()
+		err = CmdHelp(os.Args[2:]...)
 	case "server":
-		err = CmdServer()
+		err = CmdServer(os.Args[2:]...)
 	}
 
 	if err != nil {

@@ -119,6 +119,10 @@ func CmdServer(arguments ...string) error {
 				// add <key> <field> <count> [<field> <count>...]
 				Add(db, conn, cmd.Args[1:]...)
 
+			case "del":
+				// del <key> [json]
+				Del(db, conn, cmd.Args[1:]...)
+
 			case "dump":
 				Dump(db, conn, cmd.Args[1:]...)
 

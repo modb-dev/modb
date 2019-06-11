@@ -89,6 +89,38 @@ func Add(db store.Storage, conn redcon.Conn, args ...[]byte) {
 	conn.WriteString("OK")
 }
 
+func Del(db store.Storage, conn redcon.Conn, args ...[]byte) {
+	// Usage:
+	// > del chilts [json]
+
+	if len(args) < 1 {
+		conn.WriteError("ERR wrong number of arguments: del <key> [json]")
+		return
+	}
+
+	if len(args) > 2 {
+		conn.WriteError("ERR wrong number of arguments: del <key> [json]")
+		return
+	}
+
+	// ToDo: validate incoming `args`
+
+	key := string(args[0])
+	json := "{}"
+	if len(args) == 2 {
+		json = string(args[1])
+	}
+
+	err := db.Del(key, json)
+	if err != nil {
+		log.Printf("db.Del() - err: ", err)
+		conn.WriteError("ERR writing to datastore")
+		return
+	}
+
+	conn.WriteString("OK")
+}
+
 func Dump(db store.Storage, conn redcon.Conn, args ...[]byte) {
 	fmt.Println("+++ Dump +++")
 	db.Iterate(func(key, val string) {

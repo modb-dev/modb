@@ -84,6 +84,13 @@ func (s *bboltStore) Add(key, json string) error {
 	return s.op(key, "inc", json)
 }
 
+// Deletes the key, which is essentially the same as `put key {}`. The JSON can
+// contain anything (such as a reason or message), but it will be ignored when
+// reconciling the object's ledger.
+func (s *bboltStore) Del(key, json string) error {
+	return s.op(key, "del", json)
+}
+
 func (s *bboltStore) Iterate(fn func(key, val string)) error {
 	return s.db.View(func(tx *bbolt.Tx) error {
 		kb := tx.Bucket(keyBucketName)

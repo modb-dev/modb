@@ -70,6 +70,13 @@ func (s *badgerStore) Add(key, json string) error {
 	return s.op(key, "add", json)
 }
 
+// Deletes the key, which is essentially the same as `put key {}`. The JSON can
+// contain anything (such as a reason or message), but it will be ignored when
+// reconciling the object's ledger.
+func (s *badgerStore) Del(key, json string) error {
+	return s.op(key, "del", json)
+}
+
 func (s *badgerStore) Iterate(fn func(key, val string)) error {
 	log.Println("Inside Iterate()")
 	return s.db.View(func(txn *badger.Txn) error {

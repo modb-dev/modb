@@ -1,7 +1,7 @@
 all: build execute
 
 build:
-	go build cmd/modb/modb.go cmd/modb/client-commands.go
+	go build cmd/modb/modb.go cmd/modb/client.go
 
 run:
 	go run modb.go

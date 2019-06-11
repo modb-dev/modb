@@ -55,9 +55,9 @@ func (s *badgerStore) op(key, op, json string) error {
 	})
 }
 
-// Sets the item to the json data provided.
-func (s *badgerStore) Set(key, json string) error {
-	return s.op(key, "set", json)
+// Puts the JSON to the key provided (an overwrite).
+func (s *badgerStore) Put(key, json string) error {
+	return s.op(key, "put", json)
 }
 
 // Incs a field in the object.

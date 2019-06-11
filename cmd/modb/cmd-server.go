@@ -106,9 +106,9 @@ func CmdServer(arguments ...string) error {
 				// id
 				conn.WriteString(sid.IdBase64())
 
-			case "set":
-				// set <key> <json>
-				Set(db, conn, cmd.Args[1:]...)
+			case "put":
+				// put <key> <json>
+				Put(db, conn, cmd.Args[1:]...)
 
 			case "inc":
 				// inc <key> <field>

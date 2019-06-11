@@ -10,9 +10,9 @@ import (
 	"github.com/tidwall/sjson"
 )
 
-func Set(db store.Storage, conn redcon.Conn, args ...[]byte) {
+func Put(db store.Storage, conn redcon.Conn, args ...[]byte) {
 	if len(args) != 2 {
-		conn.WriteError("ERR wrong number of arguments: set <key> <json>")
+		conn.WriteError("ERR wrong number of arguments: put <key> <json>")
 		return
 	}
 
@@ -21,9 +21,9 @@ func Set(db store.Storage, conn redcon.Conn, args ...[]byte) {
 	val := string(args[1])
 
 	// ToDo: validate both name and json.
-	err := db.Set(key, val)
+	err := db.Put(key, val)
 	if err != nil {
-		log.Printf("set: db.Set(): err: ", err)
+		log.Printf("db.Put() - err: ", err)
 		conn.WriteError("ERR writing to datastore")
 		return
 	}
@@ -81,7 +81,7 @@ func Add(db store.Storage, conn redcon.Conn, args ...[]byte) {
 
 	err := db.Add(key, json)
 	if err != nil {
-		log.Printf("set: db.Add(): err: ", err)
+		log.Printf("db.Add() - err: ", err)
 		conn.WriteError("ERR writing to datastore")
 		return
 	}

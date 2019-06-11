@@ -69,9 +69,9 @@ func (s *bboltStore) op(key, op, json string) error {
 	})
 }
 
-// Sets the item to the json data provided.
-func (s *bboltStore) Set(key, json string) error {
-	return s.op(key, "set", json)
+// Puts the JSON to the key provided (an overwrite).
+func (s *bboltStore) Put(key, json string) error {
+	return s.op(key, "put", json)
 }
 
 // Incs a field inside the object.

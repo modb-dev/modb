@@ -22,9 +22,13 @@ func main() {
 		err = CmdHelp(os.Args[2:]...)
 	case "server":
 		err = CmdServer(os.Args[2:]...)
+	case "client":
+		err = CmdClient(os.Args[2:]...)
+	default:
+		err = CmdHelp(os.Args[2:]...)
 	}
 
 	if err != nil {
-		log.Fatal("Error running command:", err)
+		log.Fatal("Error running MoDB command:", err)
 	}
 }

@@ -1,18 +1,23 @@
 package main
 
 import (
+	"bufio"
+	"encoding/csv"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/chilts/sid"
+	"github.com/gomodule/redigo/redis"
 	"github.com/modb-dev/modb/store"
 	badger "github.com/modb-dev/modb/store/badger"
 	bbolt "github.com/modb-dev/modb/store/bbolt"
 	"github.com/tidwall/redcon"
 )
 
+var addr = ":29876"
 var logBucketName = []byte("log")
 var keyBucketName = []byte("key")
 
@@ -36,6 +41,7 @@ func CmdHelp(args ...string) error {
 	fmt.Println("Commands:")
 	fmt.Println("")
 	fmt.Println("  server      start a server")
+	fmt.Println("  client      client cli to the server")
 	fmt.Println("  dump        dump a database")
 	fmt.Println("  help        Help about any command")
 	fmt.Println("")
@@ -93,7 +99,6 @@ func CmdServer(args ...string) error {
 	defer db.Close()
 
 	// the main client
-	addr := ":29876"
 	log.Println("Creating Client Server")
 	server := redcon.NewServer(addr,
 		func(conn redcon.Conn, cmd redcon.Command) {
@@ -154,4 +159,59 @@ func CmdServer(args ...string) error {
 
 	log.Printf("Client Server listening on %s\n", addr)
 	return server.ListenAndServe()
+}
+
+func CmdClient(args ...string) error {
+	// connect to the default local address for now
+	conn, err := redis.Dial("tcp", addr)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	// print prompt
+	fmt.Print("modb> ")
+
+	// scan Stdin
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		text := scanner.Text()
+		if text == "quit" {
+			break
+		}
+
+		// Split string
+		r := csv.NewReader(strings.NewReader(text))
+		r.Comma = ' ' // space
+		fields, err := r.Read()
+		if err != nil {
+			fmt.Println("(error) ERR syntax error")
+			// fmt.Println(err)
+			break
+		}
+
+		fmt.Printf("\nFields:\n")
+		for _, field := range fields {
+			fmt.Printf("%q\n", field)
+		}
+
+		// split := strings.SplitN(text, " ", 2)
+		cmd := fields[0]
+		rest := fields[1:]
+
+		// fmt.Printf("text=%s\n", cmd)
+		// fmt.Printf("rest=%s\n", rest)
+
+		// ToDo: perform this command
+		val, err := redis.String(conn.Do(cmd, rest[0], rest[1]))
+		if err != nil {
+			fmt.Printf("(error) %s\n", err)
+		} else {
+			fmt.Printf("-> %s\n", val)
+		}
+
+		fmt.Print("modb> ")
+	}
+
+	return scanner.Err()
 }

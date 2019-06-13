@@ -8,6 +8,7 @@ import (
 	"github.com/modb-dev/modb/store"
 	"github.com/tidwall/redcon"
 	"github.com/tidwall/sjson"
+	"github.com/valyala/fastjson"
 )
 
 func Put(db store.Storage, conn redcon.Conn, args ...[]byte) {
@@ -16,12 +17,19 @@ func Put(db store.Storage, conn redcon.Conn, args ...[]byte) {
 		return
 	}
 
+	err := fastjson.ValidateBytes(args[1])
+	if err != nil {
+		log.Printf("db.Put() - err: ", err)
+		conn.WriteError("ERR " + err.Error())
+		return
+	}
+
 	// key is any string, val should be a valid JSON object
 	key := string(args[0])
 	val := string(args[1])
 
 	// ToDo: validate both name and json.
-	err := db.Put(key, val)
+	err = db.Put(key, val)
 	if err != nil {
 		log.Printf("db.Put() - err: ", err)
 		conn.WriteError("ERR writing to datastore")
@@ -111,7 +119,14 @@ func Del(db store.Storage, conn redcon.Conn, args ...[]byte) {
 		json = string(args[1])
 	}
 
-	err := db.Del(key, json)
+	err := fastjson.Validate(json)
+	if err != nil {
+		log.Printf("db.Del() - err: ", err)
+		conn.WriteError("ERR " + err.Error())
+		return
+	}
+
+	err = db.Del(key, json)
 	if err != nil {
 		log.Printf("db.Del() - err: ", err)
 		conn.WriteError("ERR writing to datastore")

@@ -16,6 +16,9 @@ modb-server-bbolt: build
 modb-server-badger: build
 	./modb server --datastore badger data/badger.db
 
+modb-server-level: build
+	./modb server --datastore level data/level.db
+
 modb-help: build
 	@echo "-------------------------------------------------------------------------------"
 	./modb help

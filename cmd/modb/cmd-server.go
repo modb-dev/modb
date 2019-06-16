@@ -9,8 +9,9 @@ import (
 
 	"github.com/chilts/sid"
 	"github.com/modb-dev/modb/store"
-	badger "github.com/modb-dev/modb/store/badger"
-	bbolt "github.com/modb-dev/modb/store/bbolt"
+	"github.com/modb-dev/modb/store/badger"
+	"github.com/modb-dev/modb/store/bbolt"
+	"github.com/modb-dev/modb/store/level"
 	"github.com/tidwall/redcon"
 )
 
@@ -75,6 +76,9 @@ func CmdServer(arguments ...string) error {
 	} else if datastore == "badger" {
 		log.Printf("Using datastore badger")
 		db, err = badger.Open(pathname)
+	} else if datastore == "level" {
+		log.Printf("Using datastore level")
+		db, err = level.Open(pathname)
 	}
 	if err != nil {
 		log.Fatal(err)

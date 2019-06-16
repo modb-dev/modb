@@ -138,42 +138,54 @@ func Del(db store.Storage, conn redcon.Conn, args ...[]byte) {
 
 func Dump(db store.Storage, conn redcon.Conn, args ...[]byte) {
 	// Usage:
-	// > dump [logs|keys]
+	// > dump [log|data]
 
 	if len(args) < 1 {
 		// ToDo: Dump All
-		fmt.Println("+++ Logs +++")
-		db.IterateLogs(func(key, val string) {
+		fmt.Println("Log:")
+		db.IterateLog(func(key, val string) {
 			fmt.Printf("* %s=%s\n", key, val)
 		})
-		fmt.Println("--- Logs ---")
-		fmt.Println("+++ Keys +++")
-		db.IterateKeys(func(key, val string) {
+		fmt.Println("Data:")
+		db.IterateData(func(key, val string) {
 			fmt.Printf("* %s=%s\n", key, val)
 		})
-		fmt.Println("--- Keys ---")
+		fmt.Println("End")
 		conn.WriteString("DONE")
 		return
 	}
 
 	thing := string(args[0])
-	fmt.Printf("thing=%s\n", thing)
 
-	if thing == "logs" {
-		fmt.Println("+++ Logs +++")
-		db.IterateLogs(func(key, val string) {
+	if thing == "log" {
+		fmt.Println("Log:")
+		db.IterateLog(func(key, val string) {
 			fmt.Printf("* %s=%s\n", key, val)
 		})
-		fmt.Println("--- Logs ---")
-	} else if thing == "keys" {
-		fmt.Println("+++ Keys +++")
-		db.IterateKeys(func(key, val string) {
+		fmt.Println("End")
+	} else if thing == "data" {
+		fmt.Println("Data:")
+		db.IterateData(func(key, val string) {
 			fmt.Printf("* %s=%s\n", key, val)
 		})
-		fmt.Println("--- Keys ---")
+		fmt.Println("End")
 	} else {
 		conn.WriteError("ERR unknown target")
 	}
 
 	conn.WriteString("DONE")
+}
+
+func Signature(db store.Storage, conn redcon.Conn, args ...[]byte) {
+	if len(args) < 1 {
+		conn.WriteError("ERR wrong number of arguments: signature <key>")
+		return
+	}
+
+	key := string(args[0])
+	db.IterateChanges(key, func(change store.Change) {
+		fmt.Printf("* %#v\n", change)
+	})
+
+	conn.WriteString("TODO: Write out the signature of count, key, hash")
 }

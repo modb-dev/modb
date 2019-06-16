@@ -1,6 +1,8 @@
 package level
 
 import (
+	"strings"
+
 	"github.com/chilts/sid"
 	"github.com/modb-dev/modb/store"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -8,8 +10,9 @@ import (
 )
 
 var separator = ":"
+var endSeparator = "\xff"
 var logPrefix = "log" + separator
-var keyPrefix = "key" + separator
+var dataPrefix = "data" + separator
 
 type levelStore struct{ db *leveldb.DB }
 
@@ -26,8 +29,8 @@ func Open(filename string) (store.Storage, error) {
 
 // Generic 'op'.
 func (s *levelStore) op(key, op, json string) error {
-	id := sid.IdBase64()
-	val := key + ":" + op + ":" + json
+	id := key + ":" + sid.IdBase64()
+	val := op + ":" + json
 
 	return s.db.Put([]byte(logPrefix+id), []byte(val), nil)
 }
@@ -54,35 +57,57 @@ func (s *levelStore) Del(key, json string) error {
 	return s.op(key, "del", json)
 }
 
-func (s *levelStore) IterateLogs(fn func(key, val string)) error {
+func (s *levelStore) IterateChanges(key string, fn func(change store.Change)) error {
 	r := util.Range{
 		Start: []byte(logPrefix),
-		// two separators "log::" to signify the end of the range
-		Limit: []byte(logPrefix + separator),
+		Limit: []byte(logPrefix + endSeparator),
 	}
 
 	iter := s.db.NewIterator(&r, nil)
 	for iter.Next() {
-		key := iter.Key()
-		val := iter.Value()
-		fn(string(key), string(val))
+		k := strings.TrimPrefix(string(iter.Key()), logPrefix)
+		v := string(iter.Value())
+		id := strings.SplitN(k, separator, 2)[1]
+		opDiff := strings.SplitN(v, separator, 2)
+		change := store.Change{
+			Key:  key,
+			Id:   id,
+			Op:   opDiff[0],
+			Diff: opDiff[1],
+		}
+		fn(change)
 	}
 
 	return nil
 }
 
-func (s *levelStore) IterateKeys(fn func(key, val string)) error {
+func (s *levelStore) IterateLog(fn func(key, val string)) error {
 	r := util.Range{
-		Start: []byte(keyPrefix),
-		// two separators "key::" to signify the end of the range
-		Limit: []byte(keyPrefix + separator),
+		Start: []byte(logPrefix),
+		Limit: []byte(logPrefix + endSeparator),
 	}
 
 	iter := s.db.NewIterator(&r, nil)
 	for iter.Next() {
-		key := iter.Key()
-		val := iter.Value()
-		fn(string(key), string(val))
+		k := strings.TrimPrefix(string(iter.Key()), logPrefix)
+		v := string(iter.Value())
+		fn(k, v)
+	}
+
+	return nil
+}
+
+func (s *levelStore) IterateData(fn func(key, val string)) error {
+	r := util.Range{
+		Start: []byte(dataPrefix),
+		Limit: []byte(dataPrefix + endSeparator),
+	}
+
+	iter := s.db.NewIterator(&r, nil)
+	for iter.Next() {
+		k := strings.TrimPrefix(string(iter.Key()), dataPrefix)
+		v := string(iter.Value())
+		fn(k, v)
 	}
 
 	return nil

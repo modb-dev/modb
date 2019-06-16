@@ -127,6 +127,10 @@ func CmdServer(arguments ...string) error {
 				// del <key> [json]
 				Del(db, conn, cmd.Args[1:]...)
 
+			case "signature":
+				// signature <key>
+				Signature(db, conn, cmd.Args[1:]...)
+
 			case "dump":
 				Dump(db, conn, cmd.Args[1:]...)
 

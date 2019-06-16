@@ -2,6 +2,7 @@ package bbolt
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/chilts/sid"
@@ -9,8 +10,9 @@ import (
 	bbolt "go.etcd.io/bbolt"
 )
 
+var separator = ":"
 var logBucketName = []byte("log")
-var keyBucketName = []byte("key")
+var dataBucketName = []byte("data")
 
 type bboltStore struct{ db *bbolt.DB }
 
@@ -30,10 +32,10 @@ func Open(filename string) (store.Storage, error) {
 			return fmt.Errorf("create log bucket: %s", err)
 		}
 
-		// key
-		_, err = tx.CreateBucketIfNotExists(keyBucketName)
+		// data
+		_, err = tx.CreateBucketIfNotExists(dataBucketName)
 		if err != nil {
-			return fmt.Errorf("create key bucket: %s", err)
+			return fmt.Errorf("create data bucket: %s", err)
 		}
 
 		return nil
@@ -47,8 +49,8 @@ func Open(filename string) (store.Storage, error) {
 
 // Generic 'op'.
 func (s *bboltStore) op(key, op, json string) error {
-	id := sid.IdBase64()
-	val := key + ":" + op + ":" + json
+	id := key + separator + sid.IdBase64()
+	val := op + separator + json
 
 	return s.db.Update(func(tx *bbolt.Tx) error {
 		kb := tx.Bucket(logBucketName)
@@ -83,7 +85,28 @@ func (s *bboltStore) Del(key, json string) error {
 	return s.op(key, "del", json)
 }
 
-func (s *bboltStore) IterateLogs(fn func(key, val string)) error {
+func (s *bboltStore) IterateChanges(key string, fn func(change store.Change)) error {
+	return s.db.View(func(tx *bbolt.Tx) error {
+		kb := tx.Bucket(logBucketName)
+		c := kb.Cursor()
+		for k, v := c.Seek([]byte(key)); k != nil; k, v = c.Next() {
+			if strings.HasPrefix(string(k), key+separator) {
+				id := strings.SplitN(string(k), separator, 2)[1]
+				opDiff := strings.SplitN(string(v), separator, 2)
+				change := store.Change{
+					Key:  key,
+					Id:   id,
+					Op:   opDiff[0],
+					Diff: opDiff[1],
+				}
+				fn(change)
+			}
+		}
+		return nil
+	})
+}
+
+func (s *bboltStore) IterateLog(fn func(key, val string)) error {
 	return s.db.View(func(tx *bbolt.Tx) error {
 		kb := tx.Bucket(logBucketName)
 		c := kb.Cursor()
@@ -94,9 +117,9 @@ func (s *bboltStore) IterateLogs(fn func(key, val string)) error {
 	})
 }
 
-func (s *bboltStore) IterateKeys(fn func(key, val string)) error {
+func (s *bboltStore) IterateData(fn func(key, val string)) error {
 	return s.db.View(func(tx *bbolt.Tx) error {
-		kb := tx.Bucket(keyBucketName)
+		kb := tx.Bucket(dataBucketName)
 		c := kb.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
 			fn(string(k), string(v))

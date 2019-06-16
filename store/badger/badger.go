@@ -10,8 +10,9 @@ import (
 	"github.com/modb-dev/modb/store"
 )
 
-var logPrefix = "log:"
-var keyPrefix = "key:"
+var separator = ":"
+var logPrefix = "log" + separator
+var dataPrefix = "data" + separator
 
 type badgerStore struct{ db *badger.DB }
 
@@ -33,11 +34,10 @@ func Open(dirname string) (store.Storage, error) {
 
 // op
 func (s *badgerStore) op(key, op, json string) error {
-	id := sid.IdBase64()
-	val := key + ":" + op + ":" + json
+	id := key + ":" + sid.IdBase64()
+	val := op + ":" + json
 
 	return s.db.Update(func(txn *badger.Txn) error {
-		// log
 		err := txn.Set([]byte(logPrefix+id), []byte(val))
 		if err != nil {
 			return fmt.Errorf("put log bucket: %s", err)
@@ -69,7 +69,36 @@ func (s *badgerStore) Del(key, json string) error {
 	return s.op(key, "del", json)
 }
 
-func (s *badgerStore) IterateLogs(fn func(key, val string)) error {
+func (s *badgerStore) IterateChanges(key string, fn func(change store.Change)) error {
+	return s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 100
+		prefix := []byte(logPrefix)
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			k := strings.TrimPrefix(string(item.Key()), logPrefix)
+			v, err := item.Value()
+			if err != nil {
+				return err
+			}
+
+			id := strings.SplitN(k, separator, 2)[1]
+			opDiff := strings.SplitN(string(v), separator, 2)
+			change := store.Change{
+				Key:  key,
+				Id:   id,
+				Op:   opDiff[0],
+				Diff: opDiff[1],
+			}
+			fn(change)
+		}
+		return nil
+	})
+}
+
+func (s *badgerStore) IterateLog(fn func(key, val string)) error {
 	return s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 100
@@ -83,17 +112,17 @@ func (s *badgerStore) IterateLogs(fn func(key, val string)) error {
 			if err != nil {
 				return err
 			}
-			fn(strings.TrimPrefix(string(key), keyPrefix), string(val))
+			fn(strings.TrimPrefix(string(key), logPrefix), string(val))
 		}
 		return nil
 	})
 }
 
-func (s *badgerStore) IterateKeys(fn func(key, val string)) error {
+func (s *badgerStore) IterateData(fn func(key, val string)) error {
 	return s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 100
-		prefix := []byte(keyPrefix)
+		prefix := []byte(dataPrefix)
 		it := txn.NewIterator(opts)
 		defer it.Close()
 		for it.Rewind(); it.ValidForPrefix(prefix); it.Next() {
@@ -103,7 +132,7 @@ func (s *badgerStore) IterateKeys(fn func(key, val string)) error {
 			if err != nil {
 				return err
 			}
-			fn(strings.TrimPrefix(string(key), keyPrefix), string(val))
+			fn(strings.TrimPrefix(string(key), dataPrefix), string(val))
 		}
 		return nil
 	})

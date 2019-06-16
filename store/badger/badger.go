@@ -10,8 +10,8 @@ import (
 	"github.com/modb-dev/modb/store"
 )
 
-var logBucketName = []byte("log")
-var keyBucketName = []byte("key")
+var logPrefix = "log:"
+var keyPrefix = "key:"
 
 type badgerStore struct{ db *badger.DB }
 
@@ -34,21 +34,13 @@ func Open(dirname string) (store.Storage, error) {
 // op
 func (s *badgerStore) op(key, op, json string) error {
 	id := sid.IdBase64()
-	keyKey := key + ":" + id
-	logKey := id + ":" + key
-	val := op + ":" + json
+	val := key + ":" + op + ":" + json
 
 	return s.db.Update(func(txn *badger.Txn) error {
 		// log
-		err := txn.Set([]byte("log:"+logKey), []byte(val))
+		err := txn.Set([]byte(logPrefix+id), []byte(val))
 		if err != nil {
 			return fmt.Errorf("put log bucket: %s", err)
-		}
-
-		// key
-		err = txn.Set([]byte("key:"+keyKey), []byte(val))
-		if err != nil {
-			return fmt.Errorf("put key bucket: %s", err)
 		}
 
 		return nil
@@ -77,12 +69,11 @@ func (s *badgerStore) Del(key, json string) error {
 	return s.op(key, "del", json)
 }
 
-func (s *badgerStore) Iterate(fn func(key, val string)) error {
-	log.Println("Inside Iterate()")
+func (s *badgerStore) IterateLogs(fn func(key, val string)) error {
 	return s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchSize = 100
-		prefix := []byte("key:")
+		prefix := []byte(logPrefix)
 		it := txn.NewIterator(opts)
 		defer it.Close()
 		for it.Rewind(); it.ValidForPrefix(prefix); it.Next() {
@@ -92,7 +83,27 @@ func (s *badgerStore) Iterate(fn func(key, val string)) error {
 			if err != nil {
 				return err
 			}
-			fn(strings.TrimPrefix(string(key), "key:"), string(val))
+			fn(strings.TrimPrefix(string(key), keyPrefix), string(val))
+		}
+		return nil
+	})
+}
+
+func (s *badgerStore) IterateKeys(fn func(key, val string)) error {
+	return s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchSize = 100
+		prefix := []byte(keyPrefix)
+		it := txn.NewIterator(opts)
+		defer it.Close()
+		for it.Rewind(); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			key := item.Key()
+			val, err := item.Value()
+			if err != nil {
+				return err
+			}
+			fn(strings.TrimPrefix(string(key), keyPrefix), string(val))
 		}
 		return nil
 	})

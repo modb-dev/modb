@@ -48,19 +48,11 @@ func Open(filename string) (store.Storage, error) {
 // Generic 'op'.
 func (s *bboltStore) op(key, op, json string) error {
 	id := sid.IdBase64()
-	keyKey := key + ":" + id
-	logKey := id + ":" + key
-	val := op + ":" + json
+	val := key + ":" + op + ":" + json
 
 	return s.db.Update(func(tx *bbolt.Tx) error {
-		lb := tx.Bucket(logBucketName)
-		err := lb.Put([]byte(logKey), []byte(val))
-		if err != nil {
-			return fmt.Errorf("put log bucket: %s", err)
-		}
-
-		kb := tx.Bucket(keyBucketName)
-		err = kb.Put([]byte(keyKey), []byte(val))
+		kb := tx.Bucket(logBucketName)
+		err := kb.Put([]byte(id), []byte(val))
 		if err != nil {
 			return fmt.Errorf("put key bucket: %s", err)
 		}
@@ -91,7 +83,18 @@ func (s *bboltStore) Del(key, json string) error {
 	return s.op(key, "del", json)
 }
 
-func (s *bboltStore) Iterate(fn func(key, val string)) error {
+func (s *bboltStore) IterateLogs(fn func(key, val string)) error {
+	return s.db.View(func(tx *bbolt.Tx) error {
+		kb := tx.Bucket(logBucketName)
+		c := kb.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			fn(string(k), string(v))
+		}
+		return nil
+	})
+}
+
+func (s *bboltStore) IterateKeys(fn func(key, val string)) error {
 	return s.db.View(func(tx *bbolt.Tx) error {
 		kb := tx.Bucket(keyBucketName)
 		c := kb.Cursor()

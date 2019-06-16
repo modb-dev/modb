@@ -6,6 +6,7 @@ type Storage interface {
 	Add(key, json string) error
 	Del(key, json string) error
 	// Get(key string) error
-	Iterate(fn func(key, val string)) error
+	IterateLogs(fn func(key, val string)) error
+	IterateKeys(fn func(key, val string)) error
 	Close() error
 }

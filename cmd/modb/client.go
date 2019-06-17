@@ -5,12 +5,78 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
+	"time"
 
+	"github.com/chilts/sid"
 	"github.com/modb-dev/modb/store"
 	"github.com/tidwall/redcon"
 	"github.com/tidwall/sjson"
 	"github.com/valyala/fastjson"
 )
+
+func NewClientServer(addr string, db store.Storage) *redcon.Server {
+	return redcon.NewServer(addr,
+		func(conn redcon.Conn, cmd redcon.Command) {
+			switch strings.ToLower(string(cmd.Args[0])) {
+			default:
+				conn.WriteError("ERR unknown command '" + string(cmd.Args[0]) + "'")
+			case "ping":
+				conn.WriteString("PONG")
+			case "time":
+				t := time.Now().UTC().Format("2006-01-02T15:04:05.999")
+				for len(t) < 23 {
+					t = t + "0"
+				}
+				conn.WriteString(t + "Z\n")
+
+			case "id":
+				// id
+				conn.WriteString(sid.IdBase64())
+
+			case "put":
+				// put <key> <json>
+				Put(db, conn, cmd.Args[1:]...)
+
+			case "inc":
+				// inc <key> <field>
+				// inc chilts logins
+				Inc(db, conn, cmd.Args[1:]...)
+
+			case "incby":
+				// incby <key> <field> <count> [<field> <count>...]
+				IncBy(db, conn, cmd.Args[1:]...)
+
+			case "del":
+				// del <key> [json]
+				Del(db, conn, cmd.Args[1:]...)
+
+			case "signature":
+				// signature <key>
+				Signature(db, conn, cmd.Args[1:]...)
+
+			case "dump":
+				Dump(db, conn, cmd.Args[1:]...)
+
+			case "quit":
+				conn.Close()
+			}
+		},
+		func(conn redcon.Conn) bool {
+			// use this function to accept or deny the connection.
+			log.Printf("Accept %s", conn.RemoteAddr())
+			return true
+		},
+		func(conn redcon.Conn, err error) {
+			// this is called when the connection has been closed
+			if err != nil {
+				log.Printf("Closed %s (err: %v)", conn.RemoteAddr(), err)
+				return
+			}
+			log.Printf("Closed %s", conn.RemoteAddr())
+		},
+	)
+}
 
 func Put(db store.Storage, conn redcon.Conn, args ...[]byte) {
 	if len(args) != 2 {

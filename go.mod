@@ -7,6 +7,7 @@ require (
 	github.com/chilts/sid v0.0.0-20190607042430-660e94789ec9
 	github.com/dgraph-io/badger v1.5.4
 	github.com/modb-io/modb v0.0.0-20180929103422-19b247ffaff1 // indirect
+	github.com/oklog/run v1.0.0
 	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/tidwall/redcon v1.0.0

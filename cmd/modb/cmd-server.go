@@ -119,9 +119,9 @@ func CmdServer(arguments ...string) error {
 				// inc chilts logins
 				Inc(db, conn, cmd.Args[1:]...)
 
-			case "add":
-				// add <key> <field> <count> [<field> <count>...]
-				Add(db, conn, cmd.Args[1:]...)
+			case "incby":
+				// incby <key> <field> <count> [<field> <count>...]
+				IncBy(db, conn, cmd.Args[1:]...)
 
 			case "del":
 				// del <key> [json]

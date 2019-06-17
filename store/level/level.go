@@ -40,14 +40,14 @@ func (s *levelStore) Put(key, json string) error {
 	return s.op(key, "put", json)
 }
 
-// Incs a field inside the object.
+// Increments a field inside the object.
 func (s *levelStore) Inc(key, json string) error {
 	return s.op(key, "inc", json)
 }
 
-// Adds to various fields.
-func (s *levelStore) Add(key, json string) error {
-	return s.op(key, "inc", json)
+// Increments a number of fields by respective values.
+func (s *levelStore) IncBy(key, json string) error {
+	return s.op(key, "incby", json)
 }
 
 // Deletes the key, which is essentially the same as `put key {}`. The JSON can

@@ -74,8 +74,8 @@ func (s *bboltStore) Inc(key, json string) error {
 }
 
 // Adds to various fields.
-func (s *bboltStore) Add(key, json string) error {
-	return s.op(key, "inc", json)
+func (s *bboltStore) IncBy(key, json string) error {
+	return s.op(key, "incby", json)
 }
 
 // Deletes the key, which is essentially the same as `put key {}`. The JSON can

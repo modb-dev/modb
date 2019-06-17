@@ -43,21 +43,38 @@ func Inc(db store.Storage, conn redcon.Conn, args ...[]byte) {
 	// Usage:
 	// > inc chilts logins
 
-	// Sugar for:
-	// > add chilts logins 1
-
-	if len(args) != 2 {
-		conn.WriteError("ERR wrong number of arguments: inc <key> <field>")
+	if len(args) < 2 {
+		conn.WriteError("ERR wrong number of arguments: inc <key> <field...>")
 		return
 	}
 
-	newArgs := [][]byte{args[0], args[1], []byte("1")}
-	Add(db, conn, newArgs...)
+	var err error
+
+	// key and field are strings
+	key := string(args[0])
+	json := "{}"
+	for i := 1; i < len(args); i++ {
+		json, err = sjson.Set(json, string(args[i]), true)
+		if err != nil {
+			log.Printf("error creating json, err:", err)
+			conn.WriteError("ERR error creating JSON")
+			return
+		}
+	}
+
+	err = db.Inc(key, json)
+	if err != nil {
+		log.Printf("db.Inc() - err: ", err)
+		conn.WriteError("ERR writing to datastore")
+		return
+	}
+
+	conn.WriteString("OK")
 }
 
-func Add(db store.Storage, conn redcon.Conn, args ...[]byte) {
+func IncBy(db store.Storage, conn redcon.Conn, args ...[]byte) {
 	// Usage:
-	// > add chilts logins 1 [field count...]
+	// > incby chilts logins 1 [field count...]
 
 	if len(args) < 3 {
 		conn.WriteError("ERR wrong number of arguments: add <key> <field> <count> [<field> <count>...]")
@@ -87,7 +104,7 @@ func Add(db store.Storage, conn redcon.Conn, args ...[]byte) {
 		}
 	}
 
-	err := db.Add(key, json)
+	err := db.IncBy(key, json)
 	if err != nil {
 		log.Printf("db.Add() - err: ", err)
 		conn.WriteError("ERR writing to datastore")

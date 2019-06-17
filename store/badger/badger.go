@@ -52,14 +52,14 @@ func (s *badgerStore) Put(key, json string) error {
 	return s.op(key, "put", json)
 }
 
-// Incs a field in the object.
+// Inc increments a field in the object.
 func (s *badgerStore) Inc(key, json string) error {
 	return s.op(key, "inc", json)
 }
 
-// Adds to various fields.
-func (s *badgerStore) Add(key, json string) error {
-	return s.op(key, "add", json)
+// IncBy increments various fields with values.
+func (s *badgerStore) IncBy(key, json string) error {
+	return s.op(key, "incby", json)
 }
 
 // Deletes the key, which is essentially the same as `put key {}`. The JSON can

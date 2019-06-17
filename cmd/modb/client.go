@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"strconv"
@@ -200,9 +201,18 @@ func Signature(db store.Storage, conn redcon.Conn, args ...[]byte) {
 	}
 
 	key := string(args[0])
+
+	count := 0
+	h := sha256.New()
 	db.IterateChanges(key, func(change store.Change) {
-		fmt.Printf("* %#v\n", change)
+		count++
+		line := change.Id + ":" + change.Key + ":" + change.Op + ":" + change.Diff + "\n"
+		h.Write([]byte(line))
 	})
 
-	conn.WriteString("TODO: Write out the signature of count, key, hash")
+	sum := fmt.Sprintf("%x", h.Sum(nil))
+
+	conn.WriteArray(2)
+	conn.WriteBulkString(fmt.Sprintf("%d", count))
+	conn.WriteBulkString(sum)
 }

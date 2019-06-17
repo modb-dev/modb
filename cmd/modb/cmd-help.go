@@ -1,20 +1,13 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 )
 
-func CmdHelp(msg string, arguments ...string) error {
-	flagSet := flag.NewFlagSet("", flag.ContinueOnError)
-	flagSet.Parse(arguments)
-
+func CmdHelp(msg string, opts Opts) error {
 	// get any remaining args
-	args := flagSet.Args()
-	if len(args) > 0 {
-		command := args[0]
-
-		if command == "server" {
+	if opts.Command != "" {
+		if opts.Command == "server" {
 			CmdHelpServer(msg)
 		}
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -28,37 +27,20 @@ func CmdHelpServer(msg string) error {
 	fmt.Println("        help for server")
 	fmt.Println("")
 	fmt.Println("  -d, --datastore")
-	fmt.Println("        help for server")
+	fmt.Println("        path to datastore")
 	fmt.Println("")
 	fmt.Println("Use 'modb help [command]' for more information about a command.")
 	return nil
 }
 
-func CmdServer(arguments ...string) error {
-	flagSet := flag.NewFlagSet("", flag.ContinueOnError)
-
-	// store type
-	var datastore string
-	flagSet.StringVar(&datastore, "datastore", "bbolt", "the type of store to use; valid: bbolt, badger (default: bbolt)")
-
-	// help
-	var help bool
-	flagSet.BoolVar(&help, "help", false, "help for MoDB")
-
-	flagSet.Parse(arguments)
-
-	if help == true {
+func CmdServer(opts Opts) error {
+	if opts.Help == true {
 		return CmdHelpServer("")
 	}
 
-	// get any remaining args
-	args := flagSet.Args()
-	if len(args) < 1 {
+	if opts.Pathname == "" {
 		return CmdHelpServer("Provide a path for your datastore")
 	}
-
-	// the database pathname to open (file for bbolt, directory for badger)
-	pathname := args[0]
 
 	log.Println("MoDB Started")
 	defer log.Println("MoDB Finished\n")
@@ -86,7 +68,7 @@ func CmdServer(arguments ...string) error {
 	}
 
 	// Datastore
-	db, err := NewStore(datastore, pathname)
+	db, err := NewStore(opts.Datastore, opts.Pathname)
 	if err != nil {
 		return err
 	}

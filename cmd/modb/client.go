@@ -255,6 +255,7 @@ func Dump(db store.Storage, conn redcon.Conn, args ...[]byte) {
 		fmt.Println("End")
 	} else {
 		conn.WriteError("ERR unknown target")
+		return
 	}
 
 	conn.WriteString("DONE")
